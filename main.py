@@ -45,10 +45,7 @@ def main():
     faces = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
     # pid variables
-    history = [np.array(0, 0, 0)] * INTEGRAL_HISTORY
-    integral = np.array(0, 0)
-    derivative = np.array(0, 0)
-    error = np.array(0, 0)
+    history = [np.array([[0], [0], [0]])] * INTEGRAL_HISTORY
     # allow the camera to warmup
     time.sleep(0.1)
     # capture frames from the camera
@@ -69,7 +66,7 @@ def main():
             cY = (cY - picSpace[1]) * -1
 
             error, integral, derivative = calcErrorTerms(cX, cY, time.time(), history)
-            print('error terms P {0} I {1} D {2}'.format(error, integral, derivative))
+            print('error terms P ({0},{1}) I ({2},{3}) D ({4},{5})'.format(error[0], error[1], integral[0], integral[1], derivative[0], derivative[1]))
             pid = KP * error + KI * integral + KD * derivative
         cv2.imwrite(TEMP_FILE, img)
 
@@ -77,15 +74,15 @@ def main():
         rawCapture.truncate(0)
 
 def calcErrorTerms(x, y, t, history):
-    history.append(np.array(x, y, t))
+    history.append(np.array([[x], [y], [t]]))
     history.pop(0)
     intg = np.zeros([2,1])
     for i in range(len(history) - 1):
-        dt = history[i + 1] - history[i]
+        dt = history[i + 1][2] - history[i][2]
         # left sum
-        intg += history[i][:2] * dt
+        intg = history[i][:2] * dt + intg
     der = (history[-1][:2] - history[-2][:2]) / (history[-1][2] - history[-2][2])
-    return np.array(x, y), intg, der
+    return np.array([[x], [y]]), intg, der, dt
     
 
 
