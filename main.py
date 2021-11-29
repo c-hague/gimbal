@@ -4,7 +4,7 @@ from picamera.array import PiRGBArray
 import time
 import numpy as np
 from SunFounder_PCA9685 import Servo
-import RPi.GPIO as GPIO
+# import RPi.GPIO as GPIO
 
 TEMP_FILE = 'temp.jpg'
 ALL_OFF_PIN = 11
@@ -18,9 +18,9 @@ def main():
     try:
         print('setup...')
         # emergency shuttoff
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(ALL_OFF_PIN, GPIO.OUT)
-        GPIO.output(ALL_OFF_PIN, GPIO.HIGH)
+        # GPIO.setmode(GPIO.BOARD)
+        # GPIO.setup(ALL_OFF_PIN, GPIO.OUT)
+        # GPIO.output(ALL_OFF_PIN, GPIO.HIGH)
         # enable the PC9685 and enable autoincrement
         pan = Servo.Servo(1, bus_number=1)
         tilt = Servo.Servo(0, bus_number=1)
@@ -36,7 +36,7 @@ def main():
         history = [np.array([[0], [0], [0]])] * INTEGRAL_HISTORY
         # allow the camera to warmup
         time.sleep(0.1)
-        tilt.write(90)
+        tilt.write(70)
         pan.write(90)
         print('starting ctrl+C to exit...')
         # capture frames from the camera
@@ -59,20 +59,20 @@ def main():
                 error, integral, derivative, dt = calcErrorTerms(cX, cY, time.time(), history)
                 #  print('error terms P ({0},{1}) I ({2},{3}) D ({4},{5})'.format(error[0], error[1], integral[0], integral[1], derivative[0], derivative[1]))
                 pid = KP * error + KI * integral + KD * derivative
-                pan.write(pid[0])
-                tilt.write(pid[1])
-                print(pid)
+                pan.write(pid[0, 0])
+                tilt.write(pid[1, 0])
+                print(pid[0, 0], pid[1, 0])
             # cv2.imwrite(TEMP_FILE, img)
             else:
                 print('no face found!')
                 pan.write(90)
-                tilt.write(90)
+                tilt.write(70)
             # clear the stream in preparation for the next frame
             rawCapture.truncate(0)
     finally:
         pan.write(0)
         tilt.write(0)
-        GPIO.cleanup()
+        # GPIO.cleanup()
 
 def calcErrorTerms(x, y, t, history):
     history.append(np.array([[x], [y], [t]]))
