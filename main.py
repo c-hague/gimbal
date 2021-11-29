@@ -3,16 +3,11 @@ from picamera import PiCamera
 from picamera.array import PiRGBArray
 import time
 import numpy as np
-import smbus
+from SunFounder_PCA9685.Servo import Servo
 import RPi.GPIO as GPIO
 
 TEMP_FILE = 'temp.jpg'
-ALL_OFF_PIN = 20
-I2C_ADDR = 0x40
-SERVO_PAN_LOW = 0x06
-SERVO_PAN_HIGH = 0x08
-SERVO_TILT_LOW = 0x0a
-SERVO_TILT_HIGH = 0x0c
+ALL_OFF_PIN = 11
 
 INTEGRAL_HISTORY = 10
 KP = 1
@@ -25,19 +20,11 @@ def main():
     GPIO.setmode(GPIO.BOARD)
     GPIO.setup(ALL_OFF_PIN, GPIO.OUT)
     GPIO.output(ALL_OFF_PIN, GPIO.HIGH)
-    # #I2C interface
-    bus = smbus.SMBus(1)
-    
-    ## enable the PC9685 and enable autoincrement
-    bus.write_byte_data(I2C_ADDR, 0, 0x20) # set mode 1
-    bus.write_byte_data(I2C_ADDR, 0xfe, 0x1e) # set frequency
-
-    bus.write_word_data(I2C_ADDR, 0x06, 0) # led0 output and brightness control byte 0
-    bus.write_word_data(I2C_ADDR, 0x08, 1250) # led0 output and brightness control byte 2
-
-    bus.write_word_data(I2C_ADDR, 0x0a, 0) #led1 output and brightness control byte 0
-    bus.write_word_data(I2C_ADDR, 0x0c, 1250) #led1 output and brightness control byte 2
-
+    # enable the PC9685 and enable autoincrement
+    pan = Servo(0, bus_number=1)
+    tilt = Servo(1, bus_number=1)
+    pan.write(90)
+    tilt.write(90)
     # camera and open cv
     picSpace = (640, 480)
     camera = PiCamera()
@@ -68,12 +55,14 @@ def main():
             cY = (cY - picSpace[1]) * -1
 
             error, integral, derivative, dt = calcErrorTerms(cX, cY, time.time(), history)
-            print('error terms P ({0},{1}) I ({2},{3}) D ({4},{5})'.format(error[0], error[1], integral[0], integral[1], derivative[0], derivative[1]))
+            #  print('error terms P ({0},{1}) I ({2},{3}) D ({4},{5})'.format(error[0], error[1], integral[0], integral[1], derivative[0], derivative[1]))
             pid = KP * error + KI * integral + KD * derivative
-            pan(bus, pid[0])
-            tilt(bus, pid[1])
+            print('x', pid[0], 'y', pid[1])
+            pan.write(clampAngle(pid[0]))
+            tilt.write(clampAngle(pid[1]))
         # cv2.imwrite(TEMP_FILE, img)
-
+        else:
+            print('no face found!')
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
 
@@ -87,29 +76,14 @@ def calcErrorTerms(x, y, t, history):
         intg = history[i][:2] * dt + intg
     der = (history[-1][:2] - history[-2][:2]) / (history[-1][2] - history[-2][2])
     return np.array([[x], [y]]), intg, der, dt
-    
-def pan(bus, x):
-    x = int(x)
-    if x < -255:
-        x = -255
-    if x > 255:
-        x = 255
-    if x < 0:
-        bus.write_byte_data(I2C_ADDR, SERVO_PAN_HIGH, 255 - x)
-    else:
-        bus.write_byte_data(I2C_ADDR, SERVO_PAN_LOW, x)
 
-def tilt(bus, y):
-    y = int(y)
-    if y < -255:
-        y = -255
-    if y > 255:
-        y = 255
-    if y < 0:
-        bus.write_byte_data(I2C_ADDR, SERVO_TILT_HIGH, 255 - y)
-    else:
-        bus.write_byte_data(I2C_ADDR, SERVO_TILT_LOW, y)
-    
+def clampAngle(x):
+    if x < -90:
+        x = -90
+    elif x > 90:
+        x = 90
+    return int(x)
+
 if __name__ == '__main__':
     try:
         main()
