@@ -16,7 +16,7 @@ KD = 0
 
 def main():
     try:
-        print('starting ctrl+C to exit...')
+        print('setup...')
         # emergency shuttoff
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(ALL_OFF_PIN, GPIO.OUT)
@@ -24,8 +24,6 @@ def main():
         # enable the PC9685 and enable autoincrement
         pan = Servo.Servo(1, bus_number=1)
         tilt = Servo.Servo(0, bus_number=1)
-        tilt.write(90)
-        pan.write(90)
         # camera and open cv
         picSpace = (640, 480)
         camera = PiCamera()
@@ -38,6 +36,9 @@ def main():
         history = [np.array([[0], [0], [0]])] * INTEGRAL_HISTORY
         # allow the camera to warmup
         time.sleep(0.1)
+        tilt.write(90)
+        pan.write(90)
+        print('starting ctrl+C to exit...')
         # capture frames from the camera
         for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
             img = frame.array
