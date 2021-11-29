@@ -24,6 +24,8 @@ def main():
         # enable the PC9685 and enable autoincrement
         pan = Servo(0, bus_number=1)
         tilt = Servo(1, bus_number=1)
+        tilt.write(90)
+        pan.write(90)
         # camera and open cv
         picSpace = (640, 480)
         camera = PiCamera()
@@ -64,6 +66,8 @@ def main():
             # cv2.imwrite(TEMP_FILE, img)
             else:
                 print('no face found!')
+                pan.write(90)
+                tilt.write(0)
             # clear the stream in preparation for the next frame
             rawCapture.truncate(0)
     finally:
@@ -87,6 +91,7 @@ def clampAngle(x):
         x = -90
     elif x > 90:
         x = 90
+    x += 90
     return int(x)
 
 if __name__ == '__main__':
