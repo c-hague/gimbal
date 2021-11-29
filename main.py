@@ -59,8 +59,11 @@ def main():
                 error, integral, derivative, dt = calcErrorTerms(cX, cY, time.time(), history)
                 #  print('error terms P ({0},{1}) I ({2},{3}) D ({4},{5})'.format(error[0], error[1], integral[0], integral[1], derivative[0], derivative[1]))
                 pid = KP * error + KI * integral + KD * derivative
-                pan.write(pid[0, 0])
-                tilt.write(pid[1, 0])
+                # coordinate transformation to angles
+                u = pid[0, 0] + 90
+                v = pid[0, 1] + 90
+                pan.write(u)
+                tilt.write(v)
                 print(pid[0, 0], pid[1, 0])
             # cv2.imwrite(TEMP_FILE, img)
             else:
