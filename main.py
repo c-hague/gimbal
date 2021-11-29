@@ -3,7 +3,7 @@ from picamera import PiCamera
 from picamera.array import PiRGBArray
 import time
 import numpy as np
-from SunFounder_PCA9685.Servo import Servo
+from SunFounder_PCA9685 import Servo
 import RPi.GPIO as GPIO
 
 TEMP_FILE = 'temp.jpg'
@@ -22,8 +22,8 @@ def main():
         GPIO.setup(ALL_OFF_PIN, GPIO.OUT)
         GPIO.output(ALL_OFF_PIN, GPIO.HIGH)
         # enable the PC9685 and enable autoincrement
-        pan = Servo(0, bus_number=1)
-        tilt = Servo(1, bus_number=1)
+        pan = Servo.Servo(1, bus_number=1)
+        tilt = Servo.Servo(0, bus_number=1)
         tilt.write(90)
         pan.write(90)
         # camera and open cv
@@ -58,16 +58,14 @@ def main():
                 error, integral, derivative, dt = calcErrorTerms(cX, cY, time.time(), history)
                 #  print('error terms P ({0},{1}) I ({2},{3}) D ({4},{5})'.format(error[0], error[1], integral[0], integral[1], derivative[0], derivative[1]))
                 pid = KP * error + KI * integral + KD * derivative
-                u = clampAngle(pid[0])
-                v = clampAngle(pid[1])
-                pan.write(u)
-                tilt.write(v)
-                print('u', u, pan._offset, 'v', v, tilt._offset)
+                pan.write(pid[0])
+                tilt.write(pid[1])
+                print(pid)
             # cv2.imwrite(TEMP_FILE, img)
             else:
                 print('no face found!')
                 pan.write(90)
-                tilt.write(0)
+                tilt.write(90)
             # clear the stream in preparation for the next frame
             rawCapture.truncate(0)
     finally:
@@ -85,14 +83,6 @@ def calcErrorTerms(x, y, t, history):
         intg = history[i][:2] * dt + intg
     der = (history[-1][:2] - history[-2][:2]) / (history[-1][2] - history[-2][2])
     return np.array([[x], [y]]), intg, der, dt
-
-def clampAngle(x):
-    if x < -90:
-        x = -90
-    elif x > 90:
-        x = 90
-    x += 90
-    return int(x)
 
 if __name__ == '__main__':
         main()
