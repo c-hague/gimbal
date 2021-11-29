@@ -6,7 +6,7 @@ import numpy as np
 from SunFounder_PCA9685 import Servo
 # import RPi.GPIO as GPIO
 
-TEMP_FILE = 'temp.jpg'
+TEMP_FILE = 'gif/im{0}.jpg'
 ALL_OFF_PIN = 11
 
 INTEGRAL_HISTORY = 10
@@ -42,6 +42,7 @@ def main():
         currentTilt = 70
         pan.write(90)
         currentPan = 90
+        j = 0
         print('starting ctrl+C to exit...')
         # capture frames from the camera
         for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
@@ -50,9 +51,6 @@ def main():
             found = faces.detectMultiScale(gray, minSize =(20, 20))
             if len(found) != 0:
                 x, y, width, height = found[0]
-                # cv2.rectangle(img, (x, y), 
-                #             (x + height, y + width), 
-                #             (0, 255, 0), 5)
                 # center of face
                 cX = x + width / 2
                 cY = y + height / 2
@@ -68,7 +66,15 @@ def main():
                 pan.write(currentPan)
                 tilt.write(currentTilt)
                 print('theta: {0:.2f} phi: {1:.2f}'.format(currentPan, currentTilt))
-            # cv2.imwrite(TEMP_FILE, img)
+
+                # write images for gif
+                cv2.rectangle(img, (x, y), 
+                            (x + height, y + width), 
+                            (0, 255, 0), 5)
+                text = 'current ({4}, {5}), error ({0}, {1}), integral error ({2}, {3})'.format(pX, pY, integral[0, 0], integral[1, 0], currentTilt, currentPan)
+                cv2.putText(img, text, (0,0), cv2.FONT_HERSHEY_SIMPLEX, .5, 1, cv2.LINE_AA)
+                cv2.imwrite(TEMP_FILE.format(j), img)
+                j += 1
             else:
                 print('no face found!')
                 calcErrorTerms(0, 0, time.time(), history)
