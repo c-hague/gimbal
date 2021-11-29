@@ -24,6 +24,8 @@ def main():
         # enable the PC9685 and enable autoincrement
         pan = Servo.Servo(1, bus_number=1)
         tilt = Servo.Servo(0, bus_number=1)
+        currentPan = 0
+        currentTilt = 0
         # camera and open cv
         picSpace = (640, 480)
         camera = PiCamera()
@@ -37,7 +39,9 @@ def main():
         # allow the camera to warmup
         time.sleep(0.1)
         tilt.write(70)
+        currentTilt = 70
         pan.write(90)
+        currentPan = 90
         print('starting ctrl+C to exit...')
         # capture frames from the camera
         for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
@@ -60,16 +64,18 @@ def main():
                 #  print('error terms P ({0},{1}) I ({2},{3}) D ({4},{5})'.format(error[0], error[1], integral[0], integral[1], derivative[0], derivative[1]))
                 pid = KP * error + KI * integral + KD * derivative
                 # coordinate transformation to angles
-                u = -pid[0, 0] + 90
-                v = -pid[1, 0] + 90
-                pan.write(u)
-                tilt.write(v)
-                print(u, v)
+                currentPan = -pid[0, 0] + currentPan
+                currentTilt = -pid[1, 0] + currentTilt
+                pan.write(currentPan)
+                tilt.write(currentTilt)
+                print('theta:', currentPan, 'phi:', currentTilt)
             # cv2.imwrite(TEMP_FILE, img)
             else:
                 print('no face found!')
                 pan.write(90)
+                currentPan = 90
                 tilt.write(70)
+                currentTilt = 70
             # clear the stream in preparation for the next frame
             rawCapture.truncate(0)
     finally:
