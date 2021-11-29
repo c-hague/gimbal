@@ -3,8 +3,8 @@ from picamera import PiCamera
 from picamera.array import PiRGBArray
 import time
 import numpy as np
-# import smbus
-# import RPi.GPIO as GPIO
+import smbus
+import RPi.GPIO as GPIO
 
 TEMP_FILE = 'temp.jpg'
 ALL_OFF_PIN = 20
@@ -20,21 +20,21 @@ KD = 0
 def main():
     print('starting ctrl+C to exit...')
     # emergency shuttoff
-    # GPIO.setmode(GPIO.BOARD)
-    # GPIO.setup(ALL_OFF_PIN, GPIO.OUT)
-    # GPIO.output(ALL_OFF_PIN, GPIO.HIGH)
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(ALL_OFF_PIN, GPIO.OUT)
+    GPIO.output(ALL_OFF_PIN, GPIO.HIGH)
     # #I2C interface
-    # bus = smbus.SMBus(1)
+    bus = smbus.SMBus(1)
     
     ## enable the PC9685 and enable autoincrement
-    # bus.write_byte_data(I2C_ADDR, 0, 0x20)
-    # bus.write_byte_data(I2C_ADDR, 0xfe, 0x1e)
+    bus.write_byte_data(I2C_ADDR, 0, 0x20) # set mode 1
+    bus.write_byte_data(I2C_ADDR, 0xfe, 0x1e) # set frequency
 
-    # bus.write_word_data(I2C_ADDR, 0x06, 0)
-    # bus.write_word_data(I2C_ADDR, 0x08, 1250)
+    bus.write_word_data(I2C_ADDR, 0x06, 0) # led0 output and brightness control byte 0
+    bus.write_word_data(I2C_ADDR, 0x08, 1250) # led0 output and brightness control byte 2
 
-    # bus.write_word_data(I2C_ADDR, 0x0a, 0)
-    # bus.write_word_data(I2C_ADDR, 0x0c, 1250)
+    bus.write_word_data(I2C_ADDR, 0x0a, 0) #led1 output and brightness control byte 0
+    bus.write_word_data(I2C_ADDR, 0x0c, 1250) #led1 output and brightness control byte 2
 
     # camera and open cv
     picSpace = (640, 480)
@@ -55,9 +55,9 @@ def main():
         found = faces.detectMultiScale(gray, minSize =(20, 20))
         if len(found) != 0:
             x, y, width, height = found[0]
-            cv2.rectangle(img, (x, y), 
-                        (x + height, y + width), 
-                        (0, 255, 0), 5)
+            # cv2.rectangle(img, (x, y), 
+            #             (x + height, y + width), 
+            #             (0, 255, 0), 5)
             # center of face
             cX = x + width / 2
             cY = y + height / 2
@@ -65,10 +65,14 @@ def main():
             cX = cX - picSpace[0]
             cY = (cY - picSpace[1]) * -1
 
-            error, integral, derivative = calcErrorTerms(cX, cY, time.time(), history)
+            error, integral, derivative, dt = calcErrorTerms(cX, cY, time.time(), history)
             print('error terms P ({0},{1}) I ({2},{3}) D ({4},{5})'.format(error[0], error[1], integral[0], integral[1], derivative[0], derivative[1]))
             pid = KP * error + KI * integral + KD * derivative
-        cv2.imwrite(TEMP_FILE, img)
+            xOut = clamp(int(pid[0]), picSpace[0] / -2, picSpace[0] / 2, 833, 1667)
+            yOut = clamp(int(pid[1]), picSpace[1] / -2, picSpace[1] / 2, 833, 1667)
+            bus.write_word_data(I2C_ADDR, SERVO_PAN, xOut)
+            bus.write_word_data(I2C_ADDR, SERVO_TILT, yOut)
+        # cv2.imwrite(TEMP_FILE, img)
 
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
@@ -99,6 +103,5 @@ if __name__ == '__main__':
     try:
         main()
     finally:
-        # GPIO.output(ALL_OFF_PIN, GPIO.LOW)
-        # GPIO.cleanup()
-        pass
+        GPIO.output(ALL_OFF_PIN, GPIO.LOW)
+        GPIO.cleanup()
