@@ -10,7 +10,7 @@ TEMP_FILE = 'temp.jpg'
 ALL_OFF_PIN = 11
 
 INTEGRAL_HISTORY = 10
-KP = 1e-1
+KP = 4e-2
 KI = 1e-8
 KD = 0
 
@@ -57,10 +57,9 @@ def main():
                 cX = x + width / 2
                 cY = y + height / 2
                 # transform coordinate system
-                cX = cX - picSpace[0]
-                cY = (cY - picSpace[1]) * -1
-
-                error, integral, derivative, dt = calcErrorTerms(cX, cY, time.time(), history)
+                pX = cX - picSpace[0] / 2
+                pY = (cY - picSpace[1] / 2) * -1
+                error, integral, derivative, dt = calcErrorTerms(pX, pY, time.time(), history)
                 #  print('error terms P ({0},{1}) I ({2},{3}) D ({4},{5})'.format(error[0], error[1], integral[0], integral[1], derivative[0], derivative[1]))
                 pid = KP * error + KI * integral + KD * derivative
                 # coordinate transformation to angles
@@ -68,14 +67,11 @@ def main():
                 currentTilt = -pid[1, 0] + currentTilt
                 pan.write(currentPan)
                 tilt.write(currentTilt)
-                print('theta:', currentPan, 'phi:', currentTilt)
+                print('theta: {0:.2f} phi: {1:.2f}'.format(currentPan, currentTilt))
             # cv2.imwrite(TEMP_FILE, img)
             else:
                 print('no face found!')
-                pan.write(90)
-                currentPan = 90
-                tilt.write(70)
-                currentTilt = 70
+                calcErrorTerms(0, 0, time.time(), history)
             # clear the stream in preparation for the next frame
             rawCapture.truncate(0)
     finally:
