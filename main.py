@@ -10,7 +10,7 @@ TEMP_FILE = 'temp.jpg'
 ALL_OFF_PIN = 11
 
 INTEGRAL_HISTORY = 10
-KP = 1
+KP = 1e-3
 KI = 0
 KD = 0
 
