@@ -9,8 +9,10 @@ import RPi.GPIO as GPIO
 TEMP_FILE = 'temp.jpg'
 ALL_OFF_PIN = 20
 I2C_ADDR = 0x40
-SERVO_PAN = 0x08
-SERVO_TILT = 0x0c
+SERVO_PAN_LOW = 0x06
+SERVO_PAN_HIGH = 0x08
+SERVO_TILT_LOW = 0x0a
+SERVO_TILT_HIGH = 0x0c
 
 INTEGRAL_HISTORY = 10
 KP = 1
@@ -68,10 +70,8 @@ def main():
             error, integral, derivative, dt = calcErrorTerms(cX, cY, time.time(), history)
             print('error terms P ({0},{1}) I ({2},{3}) D ({4},{5})'.format(error[0], error[1], integral[0], integral[1], derivative[0], derivative[1]))
             pid = KP * error + KI * integral + KD * derivative
-            xOut = clamp(int(pid[0]), picSpace[0] / -2, picSpace[0] / 2, 833, 1667)
-            yOut = clamp(int(pid[1]), picSpace[1] / -2, picSpace[1] / 2, 833, 1667)
-            bus.write_word_data(I2C_ADDR, SERVO_PAN, xOut)
-            bus.write_word_data(I2C_ADDR, SERVO_TILT, yOut)
+            pan(bus, pid[0])
+            tilt(bus, pid[1])
         # cv2.imwrite(TEMP_FILE, img)
 
         # clear the stream in preparation for the next frame
@@ -88,17 +88,28 @@ def calcErrorTerms(x, y, t, history):
     der = (history[-1][:2] - history[-2][:2]) / (history[-1][2] - history[-2][2])
     return np.array([[x], [y]]), intg, der, dt
     
+def pan(bus, x):
+    x = int(x)
+    if x < -255:
+        x = -255
+    if x > 255:
+        x = 255
+    if x < 0:
+        bus.write_byte_data(I2C_ADDR, SERVO_PAN_HIGH, 255 - x)
+    else:
+        bus.write_byte_data(I2C_ADDR, SERVO_PAN_LOW, x)
 
-
-def clamp(x, in_min, in_max, out_min, out_max):
-    x = x if x > in_min else in_min
-    x = x if x < in_max else in_max
-    return (x - in_min)*(out_max - out_min)/(in_max - in_min) + out_min
-
-def writeToServo(bus, servo, setting):
-    output = clamp(int(setting), 80, 220, 833, 1667)
-    bus.write_word_data(I2C_ADDR, servo, output)
-
+def tilt(bus, y):
+    y = int(y)
+    if y < -255:
+        y = -255
+    if y > 255:
+        y = 255
+    if y < 0:
+        bus.write_byte_data(I2C_ADDR, SERVO_TILT_HIGH, 255 - y)
+    else:
+        bus.write_byte_data(I2C_ADDR, SERVO_TILT_LOW, y)
+    
 if __name__ == '__main__':
     try:
         main()
