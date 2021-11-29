@@ -10,8 +10,8 @@ TEMP_FILE = 'temp.jpg'
 ALL_OFF_PIN = 11
 
 INTEGRAL_HISTORY = 10
-KP = 1e-3
-KI = 0
+KP = 1e-1
+KI = 1e-8
 KD = 0
 
 def main():
@@ -60,11 +60,11 @@ def main():
                 #  print('error terms P ({0},{1}) I ({2},{3}) D ({4},{5})'.format(error[0], error[1], integral[0], integral[1], derivative[0], derivative[1]))
                 pid = KP * error + KI * integral + KD * derivative
                 # coordinate transformation to angles
-                u = pid[0, 0] + 90
-                v = pid[0, 1] + 90
+                u = -pid[0, 0] + 90
+                v = -pid[1, 0] + 90
                 pan.write(u)
                 tilt.write(v)
-                print(pid[0, 0], pid[1, 0])
+                print(u, v)
             # cv2.imwrite(TEMP_FILE, img)
             else:
                 print('no face found!')
