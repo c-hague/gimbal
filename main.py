@@ -71,8 +71,8 @@ def main():
                 cv2.rectangle(img, (x, y), 
                             (x + height, y + width), 
                             (0, 255, 0), 5)
-                text = 'current ({4}, {5}), error ({0}, {1}), integral error ({2}, {3})'.format(pX, pY, integral[0, 0], integral[1, 0], currentTilt, currentPan)
-                cv2.putText(img, text, (0,0), cv2.FONT_HERSHEY_SIMPLEX, .5, 1, cv2.LINE_AA)
+                text = 'current ({4:.2f}, {5:.2f}), error ({0:.2f}, {1:.2f}), integral error ({2:.2f}, {3:.2f})'.format(pX, pY, integral[0, 0], integral[1, 0], currentTilt, currentPan)
+                cv2.putText(img, text, (0,470), cv2.FONT_HERSHEY_SIMPLEX, .25, (255, 0, 255), 1, cv2.LINE_AA)
                 cv2.imwrite(TEMP_FILE.format(j), img)
                 j += 1
             else:
